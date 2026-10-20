@@ -5,7 +5,7 @@ CENTRO_J1 = (1113.0, 690.0)   # eixo do J1 na imagem (medido girando o J1)
 
 def hexagonos(f):
     hsv = cv2.cvtColor(f, cv2.COLOR_BGR2HSV)
-    m = cv2.inRange(hsv, np.array((105, 110, 35)), np.array((130, 255, 125)))
+    m = cv2.inRange(hsv, np.array((105, 60, 35)), np.array((130, 255, 150)))   # azul dos hexágonos (câmeras antiga e nova)
     m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
     m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25)))
     cs, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -27,7 +27,7 @@ def acha_ponta(f, centro=CENTRO_J1):
     g = cv2.cvtColor(f, cv2.COLOR_BGR2GRAY)
     cand = []
     for h in hs:
-        if not (h["circ"] > 0.35 and 40 < h["r"] < 95):
+        if not (h["circ"] > 0.5 and 40 < h["r"] < 115):
             continue
         x, y = int(h["c"][0]), int(h["c"][1])
         disco = np.zeros_like(g)

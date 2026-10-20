@@ -30,11 +30,16 @@ Este repositório reúne o código que liga as duas partes que já existiam:
    cresce até a borda branca da caixa. Caixas encostadas ficam separadas.
 6. **Lê o nome** das caixas com o Gemini do `only-vision` (uma chamada por ciclo) e associa cada nome
    à caixa do OpenCV mais próxima. Aceita um erro de leitura (por exemplo, "Miopure" = "Micpure").
-7. **Faz o pick and place** (`pick_place.py`). Cada caixa passa por estas etapas: subir acima da
-   coletora, ir até a caixa, descer até a altura de mira, conferir pela câmera e corrigir, descer e
-   pegar (o relé troca), subir, ir até a coletora, descer e soltar (o relé volta). O código também:
+7. **Faz o pick and place** (`pick_place.py`). Uma foto só no começo planeja todas as caixas. Cada
+   caixa passa por estas etapas: subir acima da coletora, ir até a caixa, parar rapidamente a meia
+   altura para **uma foto de ajuste** (corrige a ponta uma vez, sem foto de conferência), descer, ligar
+   o relé encostado na caixa, subir, ir até a coletora e soltar já no alto (o relé volta). Com
+   `--mira` a correção vira a antiga, de até 3 fotos por caixa. O código também:
    - **evita colisão**: na hora da pega, escolhe a posição do cotovelo que deixa o braço longe da
      parede da coletora;
+   - **só anda dentro de uma área segura** (`area_segura.json`, polígonos na imagem): paredes e
+     pessoas não aparecem como obstáculo numa câmera de cima. Uma caixa fora da área ainda é tentada
+     se a ponta fica sobre a mesa e o cotovelo continua dentro da área;
    - **para tudo** se uma placa avisar de reinício do TMC, queda do 24 V ou fim de curso acionado
      fora de hora.
 
@@ -88,8 +93,9 @@ pip install -r requirements.txt
 ```
 
 Para escolher caixas pelo nome, clone o `only-vision` **ao lado** desta pasta (`../only-vision`) e
-coloque a chave do Gemini no `.env` **dele** (`GEMINI_API_KEY=...`). Este repositório não guarda
-nenhuma chave.
+coloque a chave do Gemini no `.env` **dele** (`GEMINI_API_KEY=...`). Uma segunda chave opcional
+(`GEMINI_API_KEY_2=...`) é usada quando a primeira falha, por exemplo com a cota diária esgotada.
+Este repositório não guarda nenhuma chave.
 
 ```
 scaranode/
@@ -104,8 +110,13 @@ python pick_place.py                              # todas as caixas visíveis ->
 python pick_place.py --nome micpure               # só as caixas desse remédio
 python pick_place.py --ordem arpadol,micpure      # todas da lista, nessa ordem
 python pick_place.py --nome micpure --alvo-px 718,1105   # caixa indicada à mão (ex.: cortada na borda da imagem)
+python pick_place.py --gemini                     # caixas pelo Gemini (acha caixas de impressão clara que o OpenCV perde)
+python pick_place.py --mira                       # correção pela câmera com conferência (mais lento)
 
-python diagnostico.py --corrigir   # re-zera J1/J2 pela câmera e o Z pelo fim de curso (depois de bater, perder passo...)
+python localizar.py                # depois de desligar/mover o braço à mão: acha J1/J2 pela câmera, sem mexer as juntas
+python recalibrar.py               # grade nova dentro da área segura (depois de mover a câmera)
+python ignora_vm.py braco          # só se o sensor de 24 V da placa falhar: desliga o monitor na RAM
+python diagnostico.py --corrigir   # re-zera J1/J2 pela câmera (atenção: as poses dele são da calibração antiga)
 python bomba.py liga|desliga|firmware
 python ir_caixa.py                 # só leva a ventosa ao centro de uma caixa e confere
 python calibrar.py                 # refaz o ajuste a partir de dados_grade.json
@@ -125,13 +136,22 @@ e as velocidades no topo de `scara.py`.
 | `caixa.py` | detecção das caixas de remédio (OpenCV) |
 | `pick_place.py` | ciclo completo, caixa coletora, colisão, nomes pelo Gemini, relé |
 | `diagnostico.py` | mede pela câmera quanto J1/J2 saíram do modelo e corrige |
+| `localizar.py` | acha J1/J2 por uma foto (ponta + cotovelo) depois de o braço ser movido à mão |
+| `recalibrar.py` | grade de calibração automática, só dentro da área segura e conferindo cada pose pela câmera |
+| `ignora_vm.py` | contorna, só na RAM, um sensor de 24 V com defeito na placa |
+| `area_segura.json` | polígonos (pixels) onde o braço pode andar: baixo e no alto (por cima da coletora) |
 | `bomba.py` | relé da bomba de vácuo |
 | `cam.py`, `medir_rot.py`, `ir_caixa.py` | câmera, medida de rotação entre fotos, teste de ir até uma caixa |
 
 ## Limitações conhecidas
 
 - **A calibração depende do zero do J1**, que não tem fim de curso. Se as placas reiniciarem ou os
-  motores forem soltos, rode `diagnostico.py --corrigir`, desde que o braço ainda apareça na imagem.
+  motores forem soltos, rode `localizar.py`, desde que o braço ainda apareça na imagem.
+- **A placa da bomba trava com o ruído do motor da bomba.** O código tenta reconectar; se não
+  voltar, é preciso replugar o USB. Correção de hardware: diodo de flyback e 100 nF no motor, ou
+  fonte separada.
+- A calibração atual cobre só a metade direita da mesa; fora dela o ajuste pela câmera compensa erros
+  de 2–4 cm.
 - O fim de curso de baixo do Z para a ventosa ~7 mm acima de uma caixa de 30 mm. Mesmo assim, a
   ventosa conseguiu pegar as caixas nos testes.
 - A altura entre o topo do rolamento e a boca da ventosa (`MARCADOR_ACIMA_VENTOSA`) foi estimada.

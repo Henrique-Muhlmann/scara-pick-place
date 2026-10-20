@@ -24,7 +24,7 @@ class Bomba:
     """conexão aberta com o REPL da placa: cada troca do relé leva ~20 ms"""
 
     def __init__(self):
-        self.s = serial.Serial(porta(), 115200, timeout=0.5)
+        self.s = serial.Serial(porta(), 115200, timeout=0.5, write_timeout=1.0)
         time.sleep(0.1)
         self.s.write(b"\x03\x03")              # para o firmware (ou um comando) e cai no REPL
         time.sleep(0.5)
@@ -41,8 +41,24 @@ class Bomba:
             raise RuntimeError("bomba: %s" % resp.decode(errors="replace"))
         return resp.decode(errors="replace")
 
-    def rele(self, v):
-        self._exec("rele.value(%d)" % (1 if v else 0))
+    def rele(self, v, tentativas=4):
+        """troca o relé; se a placa travou (ruído da bomba), reabre a conexão e tenta de novo"""
+        for k in range(tentativas):
+            try:
+                self._exec("rele.value(%d)" % (1 if v else 0))
+                return
+            except Exception as e:
+                print("   [bomba] sem resposta (%s): reconectando..." % type(e).__name__, flush=True)
+                try:
+                    self.s.close()
+                except Exception:
+                    pass
+                time.sleep(1.5)
+                try:
+                    self.__init__()
+                except Exception:
+                    pass
+        raise RuntimeError("placa da bomba não responde: desconecte/reconecte o USB dela")
 
     def estado(self):
         r = self._exec("print('R', rele.value())")

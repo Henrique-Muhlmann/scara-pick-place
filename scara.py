@@ -18,7 +18,7 @@ UID_Z = "5044466888c15b1c"
 # passos por unidade (grau ou mm), canal e limites — vindos do config.json das placas
 EIXOS = {
     "j1": {"placa": "braco", "k": "dm556", "passos_un": 3200 * 14 / 360, "min": -130, "max": 130, "v": 30, "a": 60},
-    "j2": {"placa": "braco", "k": "tmc", "passos_un": 200 * 32 * 12 / 360, "min": -112, "max": 135, "v": 45, "a": 90},
+    "j2": {"placa": "braco", "k": "tmc", "passos_un": 200 * 32 * 12 / 360, "min": -250, "max": 250, "v": 45, "a": 90},
     "z": {"placa": "z", "k": "tmc", "passos_un": 200 * 16 / 8, "min": -106, "max": 99, "v": 45, "a": 150},   # 45 mm/s ≈ 340 rpm: acima disso o Z perde passo subindo (testado)
 }
 
@@ -27,10 +27,10 @@ Z_CHAVE = 100.31  # posição do Z (referencial da calibração) em que o fim de
 Z_TOQUE_MESA = -135.0   # ventosa encosta na mesa (medido: a -40 faltavam 65 mm até a caixa de 30 mm)
 
 # movimento conjunto J1+J2 (trajetória sincronizada): limites em grau/s e grau/s²
-VEL_JUNTAS = {"j1": 900 / 60 * 360 / 14, "j2": 800 / 60 * 360 / 12}   # 900 rpm no motor do J1, 800 no J2 (limite da trajetória)
+VEL_JUNTAS = {"j1": 90.0, "j2": 45.0}   # °/s: testado pela câmera (erro < 0,6°) em 19/10
 VEL_PONTA = 3000.0  # mm/s: teto da velocidade da ponta (cartesiana)
 L1, L2, O2 = 300.0, 200.0, -22.53   # braço (mm) e zero do J2 (calibracao_braco.json)
-ACEL_JUNTAS = {"j1": 60.0, "j2": 60.0}   # °/s²: reduzida depois da bomba montada no antebraço (antes 120 testado sem bomba)
+ACEL_JUNTAS = {"j1": 120.0, "j2": 60.0}   # °/s²
 DT = 0.01          # s por segmento (igual ao painel)
 FREQ = 10_000_000  # relógio do gerador de passos da placa
 TJ_DMIN = 50

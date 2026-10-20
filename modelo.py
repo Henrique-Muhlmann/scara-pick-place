@@ -24,6 +24,8 @@ class Modelo:
         c = json.load(open(arq))
         self.P = np.array(c["P"])
         self.L1, self.L2, self.o2 = c["L1"], c["L2"], c["o2"]
+        self.lim2 = tuple(c.get("lim2", (-112, 135)))     # limites do J2 no zero atual (gravados na calibração)
+        self.parque = tuple(c.get("parque", (20.0, -110.0)))
 
     # ---- câmera ----
     def z_do_plano(self, altura_mm):
@@ -52,8 +54,9 @@ class Modelo:
         b = math.radians(j1 + j2 + self.o2)
         return self.L1 * math.cos(a) + self.L2 * math.cos(b), self.L1 * math.sin(a) + self.L2 * math.sin(b)
 
-    def ik_todas(self, x, y, lim1=(-130, 130), lim2=(-112, 135)):
+    def ik_todas(self, x, y, lim1=(-130, 130), lim2=None):
         """todas as soluções (j1, j2) dentro dos limites para a ponta em (x, y)"""
+        lim2 = lim2 or self.lim2
         r2 = x * x + y * y
         c2 = (r2 - self.L1 ** 2 - self.L2 ** 2) / (2 * self.L1 * self.L2)
         if abs(c2) > 1:
@@ -70,7 +73,7 @@ class Modelo:
                     sols.append((j1, j2))
         return sols
 
-    def ik(self, x, y, ref=None, lim1=(-130, 130), lim2=(-112, 135), livre=None):
+    def ik(self, x, y, ref=None, lim1=(-130, 130), lim2=None, livre=None):
         """ângulos (j1, j2) para a ponta em (x, y): a solução dentro dos limites mais perto de `ref`;
         com `livre(j1, j2) -> bool`, só as soluções em que o braço não bate em nada"""
         sols = self.ik_todas(x, y, lim1, lim2)

@@ -5,3 +5,8 @@ __pycache__/
 # segredos: a chave do Gemini fica no .env do only-vision, nunca aqui
 .env
 *.env
+# backups e arquivos intermediários da calibração
+*.bak
+*.bak2
+*_parcial.json
+*_candidata.json
